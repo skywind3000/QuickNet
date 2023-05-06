@@ -813,7 +813,7 @@ void iring_swap(struct IRING *ring, void *buffer, ilong capacity)
 {
 	ilong size = (ring->capacity < capacity)? ring->capacity : capacity;
 	iring_fetch(ring, 0, buffer, size);
-	ring->data = buffer;
+	ring->data = (char*)buffer;
 	ring->capacity = capacity;
 	ring->head = 0;
 	if (ring->size > ring->capacity) ring->size = ring->capacity;
