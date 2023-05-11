@@ -14,10 +14,9 @@
 #include <memory>
 
 #include "../system/itimer.h"
-#include "../system/system.h"
 
 
-NAMESPACE_BEGIN(System);
+namespace System {
 
 //---------------------------------------------------------------------
 // timer scheduler
@@ -56,7 +55,6 @@ public:
 
 private:
 	static void TimerCallback(void *data, void *user);
-	void Callback(void *user);
 
 private:
 	std::unique_ptr<itimer_evt> _timer_id;
@@ -67,7 +65,7 @@ private:
 
 
 
-NAMESPACE_END(System);
+}
 
 
 #endif

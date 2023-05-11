@@ -9,7 +9,7 @@
 #include "QuickTimer.h"
 #include <memory>
 
-NAMESPACE_BEGIN(System);
+namespace System {
 
 //---------------------------------------------------------------------
 // init
@@ -105,20 +105,12 @@ void QuickTimer::TimerCallback(void *data, void *user)
 {
 	if (data) {
 		QuickTimer *timer = (QuickTimer*)data;
-		timer->Callback(user);
+		if (timer->_callback) {
+			timer->_callback(timer, user);
+		}
 	}
 }
 
-
-//---------------------------------------------------------------------
-// actual callback
-//---------------------------------------------------------------------
-void QuickTimer::Callback(void *user)
-{
-	if (_callback != NULL) {
-		_callback(this, user);
-	}
-}
 
 
 //---------------------------------------------------------------------
@@ -131,7 +123,7 @@ void QuickTimer::Bind(OnTimer func, void *user)
 }
 
 
+}
 
-NAMESPACE_END(System);
 
 
