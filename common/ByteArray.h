@@ -3,7 +3,7 @@
 // ByteArray.h - ActionScript3 ByteArray Simulation
 //
 // Created by skywind on 2019/07/02
-// Last Modified: 2019/07/02 18:56:46
+// Last Modified: 2022/03/12 18:56:46
 //
 // ByteArray is a byte array with file-object like interfaces:
 //
@@ -111,6 +111,12 @@ public:
 
 	inline unsigned char* data();
 	inline const unsigned char* data() const;
+
+	inline void assign(const void *ptr, int size);
+	inline void assign(const char *ptr);
+	inline void assign(const ByteArray &ba);
+	inline void assign(const std::string &s);
+	inline void assign(const std::vector<uint8_t> &v);
 
 	inline void resize(int size);		// change current size
 	inline void reserve(int size);		// reserve memory
@@ -363,40 +369,57 @@ inline ByteArray::ByteArray(ByteArray &&ba): _data(std::move(ba._data)) {
 //---------------------------------------------------------------------
 // assignments
 //---------------------------------------------------------------------
-inline ByteArray& ByteArray::operator=(const ByteArray &ba) {
-	_pos = ba._pos;
-	resize(ba.size());
+inline void ByteArray::assign(const void *ptr, int size) {
+	resize((int)size);
 	if (_size > 0) {
-		memcpy(&_data[0], &ba._data[0], _size);
+		memcpy(&_data[0], ptr, size);
 	}
+	_pos = 0;
+}
+
+inline void ByteArray::assign(const char *ptr) {
+	int size = (ptr)? ((int)strlen(ptr)) : 0;
+	assign(ptr, size);
+}
+
+inline void ByteArray::assign(const ByteArray &ba) {
+	assign(ba.data(), ba.size());
+}
+
+inline void ByteArray::assign(const std::string &s) {
+	resize((int)s.size());
+	if (_size > 0) {
+		memcpy(&_data[0], s.c_str(), _size);
+	}
+	_pos = 0;
+}
+
+inline void ByteArray::assign(const std::vector<uint8_t> &v) {
+	resize((int)v.size());
+	if (_size > 0) {
+		memcpy(&_data[0], &v[0], _size);
+	}
+	_pos = 0;
+}
+
+inline ByteArray& ByteArray::operator=(const ByteArray &ba) {
+	assign(ba);
 	_endian = ba._endian;
 	return *this;
 }
 
 inline ByteArray& ByteArray::operator=(const std::string &s) {
-	_pos = 0;
-	resize((int)s.size());
-	if (_size > 0) {
-		memcpy(&_data[0], s.c_str(), _size);
-	}
+	assign(s);
 	return *this;
 }
 
 inline ByteArray& ByteArray::operator=(const std::vector<uint8_t> &v) {
-	_pos = 0;
-	resize((int)v.size());
-	if (_size > 0) {
-		memcpy(&_data[0], &v[0], _size);
-	}
+	assign(v);
 	return *this;
 }
 
 inline ByteArray& ByteArray::operator=(const char *text) {
-	_pos = 0;
-	resize((int)strlen(text));
-	if (_size > 0) {
-		memcpy(&_data[0], text, _size);
-	}
+	assign(text);
 	return *this;
 }
 

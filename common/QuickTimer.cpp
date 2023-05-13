@@ -69,7 +69,7 @@ QuickTimer::~QuickTimer()
 
 
 //---------------------------------------------------------------------
-// 
+// start timer
 //---------------------------------------------------------------------
 void QuickTimer::StartTimer(uint32_t period, int repeat)
 {
@@ -78,7 +78,7 @@ void QuickTimer::StartTimer(uint32_t period, int repeat)
 
 
 //---------------------------------------------------------------------
-// 
+// stop timer
 //---------------------------------------------------------------------
 void QuickTimer::StopTimer()
 {
@@ -87,7 +87,7 @@ void QuickTimer::StopTimer()
 
 
 //---------------------------------------------------------------------
-// 
+// returns true if the timer is running
 //---------------------------------------------------------------------
 bool QuickTimer::IsRunning() const
 {
