@@ -636,7 +636,6 @@ void iring_init(struct IRING *ring, void *buffer, ilong capacity)
 	ring->data = (char*)buffer;
 	ring->capacity = capacity;
 	ring->head = 0;
-	ring->size = 0;
 }
 
 /* return head position */
@@ -644,13 +643,6 @@ ilong iring_head(const struct IRING *ring)
 {
 	assert(ring);
 	return ring->head;
-}
-
-/* remain free space */
-ilong iring_avail(const struct IRING *ring) 
-{
-	assert(ring);
-	return ring->capacity - ring->size;
 }
 
 /* calculate new position within the range of [0, capacity) */
@@ -687,14 +679,11 @@ ilong iring_advance(struct IRING *ring, ilong offset)
 		return ring->head;
 	}
 	ring->head = iring_modulo(ring, ring->head + offset);
-	ring->size -= offset;
-	if (ring->size > cap) ring->size = cap;
-	else if (ring->size < 0) ring->size = 0;
 	return ring->head;
 }
 
 /* fetch data from position */
-ilong iring_fetch(const struct IRING *ring, ilong pos, void *ptr, ilong len)
+ilong iring_read(const struct IRING *ring, ilong pos, void *ptr, ilong len)
 {
 	char *lptr = (char*)ptr;
 	ilong cap = ring->capacity;
@@ -714,7 +703,7 @@ ilong iring_fetch(const struct IRING *ring, ilong pos, void *ptr, ilong len)
 }
 
 /* store data to position */
-ilong iring_store(struct IRING *ring, ilong pos, const void *ptr, ilong len)
+ilong iring_write(struct IRING *ring, ilong pos, const void *ptr, ilong len)
 {
 	const char *lptr = (const char*)ptr;
 	ilong cap = ring->capacity;
@@ -752,55 +741,6 @@ ilong iring_fill(struct IRING *ring, ilong pos, unsigned char ch, ilong len)
 	return len;
 }
 
-/* read from ring buffer */
-ilong iring_write(struct IRING *ring, const void *ptr, ilong len)
-{
-	ilong canwrite = iring_avail(ring);
-	if (canwrite > 0) {
-		len = (len < canwrite)? len : canwrite;
-		iring_store(ring, ring->size, ptr, len);
-		ring->size += len;
-		return len;
-	}
-	return 0;
-}
-
-/* clear ring buffer */
-ilong iring_read(struct IRING *ring, void *ptr, ilong len)
-{
-	ilong canread = ring->size;
-	if (canread > 0) {
-		len = (len < canread)? len : canread;
-		iring_fetch(ring, 0, ptr, len);
-		ring->head += len;
-		if (ring->head >= ring->capacity) {
-			ring->head -= ring->capacity;
-		}
-		ring->size -= len;
-		return len;
-	}
-	return 0;
-}
-
-/* read data from head but keep head position */
-ilong iring_peek(const struct IRING *ring, void *ptr, ilong len)
-{
-	len = (len < ring->size)? len : (ring->size);
-	return iring_fetch(ring, 0, ptr, len);
-}
-
-/* clear data */
-void iring_clear(struct IRING *ring)
-{
-	ring->size = 0;
-}
-
-/* drop data */
-ilong iring_drop(struct IRING *ring, ilong size)
-{
-	return iring_advance(ring, size);
-}
-
 /* flat memory */
 ilong iring_flat(const struct IRING *ring, void **pointer)
 {
@@ -812,11 +752,10 @@ ilong iring_flat(const struct IRING *ring, void **pointer)
 void iring_swap(struct IRING *ring, void *buffer, ilong capacity)
 {
 	ilong size = (ring->capacity < capacity)? ring->capacity : capacity;
-	iring_fetch(ring, 0, buffer, size);
+	iring_read(ring, 0, buffer, size);
 	ring->data = (char*)buffer;
 	ring->capacity = capacity;
 	ring->head = 0;
-	if (ring->size > ring->capacity) ring->size = ring->capacity;
 }
 
 void iring_ptrs(struct IRING *ring, void **p1, ilong *s1, 
@@ -826,7 +765,7 @@ void iring_ptrs(struct IRING *ring, void **p1, ilong *s1,
 	p1[0] = ring->data + ring->head;
 	s1[0] = half;
 	p2[0] = ring->data;
-	s2[0] = ring->size - half;
+	s2[0] = ring->head;
 }
 
 
@@ -1147,9 +1086,9 @@ int istrncasecmp(char* s1, char* s2, size_t num)
 /* strsep */
 char *istrsep(char **stringp, const char *delim)
 {
-	register char *s;
-	register const char *spanp;
-	register int c, sc;
+	char *s;
+	const char *spanp;
+	int c, sc;
 	char *tok;
 
 	if ((s = *stringp) == NULL)

@@ -1285,7 +1285,6 @@ struct IRING			/* ci-buffer type */
 	char *data;			/* buffer ptr */
 	ilong capacity;		/* buffer capacity */
 	ilong head;			/* read ptr */
-	ilong size;			/* available size */
 };
 
 typedef struct IRING iring_t;
@@ -1298,32 +1297,17 @@ typedef struct IRING iring_t;
 /* init circle cache */
 void iring_init(struct IRING *ring, void *buffer, ilong capacity);
 
-/* remain free space */
-ilong iring_avail(const struct IRING *ring);
-
 /* move head forward */
 ilong iring_advance(struct IRING *ring, ilong offset);
 
-/* write data to ring buffer */
-ilong iring_write(struct IRING *ring, const void *ptr, ilong len);
+/* fetch data from given position */
+ilong iring_read(const struct IRING *ring, ilong pos, void *ptr, ilong len);
 
-/* read from ring buffer */
-ilong iring_read(struct IRING *ring, void *ptr, ilong len);
-
-/* clear ring buffer */
-void iring_clear(struct IRING *ring);
-
-/* drop data */
-ilong iring_drop(struct IRING *ring, ilong size);
+/* store data to certain position */
+ilong iring_write(struct IRING *ring, ilong pos, const void *ptr, ilong len);
 
 /* get flat ptr and returns flat size */
 ilong iring_flat(const struct IRING *ring, void **pointer);
-
-/* fetch data from given position */
-ilong iring_fetch(const struct IRING *ring, ilong pos, void *ptr, ilong len);
-
-/* store data to certain position */
-ilong iring_store(struct IRING *ring, ilong pos, const void *ptr, ilong len);
 
 /* fill data into position */
 ilong iring_fill(struct IRING *ring, ilong pos, unsigned char ch, ilong len);
@@ -1716,6 +1700,21 @@ static inline IUINT32 icrypt_checksum(const void *src, ilong size) {
 	for (; size > 0; ptr++, size--) 
 		checksum += ptr[0];
 	return checksum;
+}
+
+static inline void icrypt_xor_str(const void *src, void *dst, 
+		ilong size, const unsigned char *mask, int msize) {
+	const unsigned char *ptr = (const unsigned char*)src;
+	unsigned char *out = (unsigned char*)dst;
+	const unsigned char *mptr = mask;
+	const unsigned char *mend = mask + msize;
+	for (; size > 0; ptr++, out++, size--) {
+		out[0] = ptr[0] ^ mptr[0];
+		mptr++;
+		if (mptr >= mend) {
+			mptr = mask;
+		}
+	}
 }
 
 
