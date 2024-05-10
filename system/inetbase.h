@@ -426,7 +426,7 @@ extern "C" {
 void isleep(unsigned long millisecond);
 
 /* get system time of day */
-void itimeofday(long *sec, long *usec);
+void itimeofday(time_t *sec, long *usec);
 
 /* get clock in millisecond */
 unsigned long iclock(void);
@@ -912,8 +912,13 @@ struct iPosixTimer;
 typedef struct iPosixTimer iPosixTimer;
 
 
-/* create a new timer */
-iPosixTimer *iposix_timer_new(void);
+/* flag to use timer event (timeSetEvent) to achieve higher resolution */
+/* Windows only allows 16 timer events(timeSetEvent) per process */
+/* Leave the flags to 0, to use default implementation (cond-var) */
+#define IPOSIX_TIMER_WIN_TIMER_EVENT   0x10
+
+/* create a new timer: flags can be set to 0 by default */
+iPosixTimer *iposix_timer_new(int flags);
 
 /* delete a timer */
 void iposix_timer_delete(iPosixTimer *timer);
@@ -979,10 +984,10 @@ iulong iposix_sem_value(iPosixSemaphore *sem);
 
 
 /* high resolution clock, returns nanosecond */
-void iposix_clock_gettime(int clock_id, time_t *sec, long *nsec);
+void iposix_clock_gettime(int source, time_t *sec, long *nsec);
 
 /* returns 64bit nanosecond */
-IINT64 iposix_clock_nanosec(int clock_id);
+IINT64 iposix_clock_nanosec(int source);
 
 
 /*===================================================================*/

@@ -48,8 +48,8 @@ struct CAsyncNode
 	int rtt;
 	int ipv6;
 	int afunix;
-	long ts_ping;
-	long ts_idle;
+	time_t ts_ping;
+	time_t ts_idle;
 };
 
 
@@ -70,8 +70,8 @@ struct CAsyncNotify
 	idict_t *sidblack;			// black list 
 	IUINT32 current;			// current millisec
 	ivalue_t token;				// authentication token
-	long seconds;				// seconds since UTC 1970.1.1 00:00:00
-	long lastsec;				// variable to trigger timer
+	time_t seconds;				// seconds since UTC 1970.1.1 00:00:00
+	time_t lastsec;				// variable to trigger timer
 	long msgcnt;				// message count
 	long maxsize;				// max data buffer size
 	int use_allow_table;		// whether enable 
@@ -775,7 +775,7 @@ static long async_notify_msg_read(CAsyncNotify *notify, int *event,
 //---------------------------------------------------------------------
 void async_notify_wait(CAsyncNotify *notify, IUINT32 millisec)
 {
-	long seconds;
+	time_t seconds;
 
 	ASYNC_NOTIFY_CRITICAL_BEGIN(notify);
 
@@ -1433,7 +1433,8 @@ static long async_notify_get_connection(CAsyncNotify *notify, int sid)
 	char remote[128];
 	char signature[64];
 	struct sockaddr *rmt = (struct sockaddr*)remote;
-	long hid, hr, seconds;
+	long hid, hr;
+	time_t seconds;
 	int keysize;
 
 	// get connection
