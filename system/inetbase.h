@@ -426,7 +426,7 @@ extern "C" {
 void isleep(unsigned long millisecond);
 
 /* get system time of day */
-void itimeofday(time_t *sec, long *usec);
+void itimeofday(IINT64 *sec, long *usec);
 
 /* get clock in millisecond */
 unsigned long iclock(void);
@@ -984,7 +984,7 @@ iulong iposix_sem_value(iPosixSemaphore *sem);
 
 
 /* high resolution clock, returns nanosecond */
-void iposix_clock_gettime(int source, time_t *sec, long *nsec);
+void iposix_clock_gettime(int source, IINT64 *sec, long *nsec);
 
 /* returns 64bit nanosecond */
 IINT64 iposix_clock_nanosec(int source);

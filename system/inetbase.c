@@ -170,12 +170,12 @@ void isleep(unsigned long millisecond)
 
 
 /* get system time */
-static void itimeofday_default(time_t *sec, long *usec)
+static void itimeofday_default(IINT64 *sec, long *usec)
 {
 	#if defined(__unix)
 	struct timeval time;
 	gettimeofday(&time, NULL);
-	if (sec) *sec = (time_t)(time.tv_sec);
+	if (sec) *sec = (IINT64)(time.tv_sec);
 	if (usec) *usec = (long)(time.tv_usec);
 	#elif defined(_WIN32)
 	typedef void (WINAPI * GetSystemTime_t)(LPFILETIME);
@@ -204,18 +204,18 @@ static void itimeofday_default(time_t *sec, long *usec)
 	ularge.LowPart = file_time.dwLowDateTime;
 	ularge.HighPart = file_time.dwHighDateTime;
 	current = ((IINT64)ularge.QuadPart) - epoch;
-	if (sec) *sec = (time_t)(current / 10000000);
+	if (sec) *sec = (IINT64)(current / 10000000);
 	if (usec) *usec = (long)((current % 10000000) / 10);
 	#endif
 }
 
 /* get time of day */
-void itimeofday(time_t *sec, long *usec)
+void itimeofday(IINT64 *sec, long *usec)
 {
 	static volatile int inited = 0;
 	volatile int *once = &inited;
 	IINT64 value;
-	time_t s;
+	IINT64 s;
 	long u;
 	itimeofday_default(&s, &u);
 	value = ((IINT64)s) * 1000 + (u / 1000);
@@ -238,7 +238,7 @@ void itimeofday(time_t *sec, long *usec)
 IINT64 iclock64(void)
 {
 	long u;
-	time_t s;
+	IINT64 s;
 	IINT64 value;
 	itimeofday(&s, &u);
 	value = ((IINT64)s) * 1000 + (u / 1000);
@@ -273,7 +273,7 @@ IINT64 iclockrt(void)
 	#endif
 	current = ((IINT64)ts.tv_sec) * 1000000 + ((IINT64)ts.tv_nsec) / 1000;
 #else
-	time_t sec;
+	IINT64 sec;
 	long usec;
 	itimeofday(&sec, &usec);
 	current = ((IINT64)sec) * 1000000 + ((IINT64)usec);
@@ -754,17 +754,17 @@ int ipollfd(int sock, int event, long millisec)
 	tmx.tv_usec = (millisec % 1000) * 1000;
 	if (event & ISOCK_ERECV) {
 		FD_ZERO(&fdr);
-		FD_SET(sock, &fdr);
+		FD_SET((SOCKET)sock, &fdr);
 		pr = &fdr;
 	}
 	if (event & ISOCK_ESEND) {
 		FD_ZERO(&fdw);
-		FD_SET(sock, &fdw);
+		FD_SET((SOCKET)sock, &fdw);
 		pw = &fdw;
 	}
 	if (event & ISOCK_ERROR) {
 		FD_ZERO(&fde);
-		FD_SET(sock, &fde);
+		FD_SET((SOCKET)sock, &fde);
 		pe = &fde;
 	}
 	retval = select(sock + 1, pr, pw, pe, (millisec >= 0)? &tmx : 0);
@@ -6510,10 +6510,11 @@ static void iposix_clock_init_win32(void)
 	iposix_clock_monotonic_win7();
 }
 
-#define IPOSIX_CLOCK_FACTOR (0x19db1ded53e8000LL)
+#define IPOSIX_MAKE_QWORD(hi, lo) ((((IINT64)(hi)) << 32) | ((IINT64)(lo)))
+#define IPOSIX_CLOCK_FACTOR IPOSIX_MAKE_QWORD(0x19db1de, 0xd53e8000)
 
 /* for Windows 7: 100ns units */
-static void iposix_clock_win32_realtime(time_t *sec, long *nsec)
+static void iposix_clock_win32_realtime(IINT64 *sec, long *nsec)
 {
 	LARGE_INTEGER ularge;
 	FILETIME file_time;
@@ -6527,12 +6528,12 @@ static void iposix_clock_win32_realtime(time_t *sec, long *nsec)
 	ularge.LowPart = file_time.dwLowDateTime;
 	ularge.HighPart = file_time.dwHighDateTime;
 	now = (ularge.QuadPart - IPOSIX_CLOCK_FACTOR);
-	sec[0] = (time_t)(now / 10000000);
+	sec[0] = (IINT64)(now / 10000000);
 	nsec[0] = (long)((now % 10000000) * 100);
 }
 
 /* generic realtime clock for Windows */
-static void iposix_clock_win32_realtime_coarse(time_t *sec, long *nsec)
+static void iposix_clock_win32_realtime_coarse(IINT64 *sec, long *nsec)
 {
 	LARGE_INTEGER ularge;
 	FILETIME file_time;
@@ -6541,17 +6542,17 @@ static void iposix_clock_win32_realtime_coarse(time_t *sec, long *nsec)
 	ularge.LowPart = file_time.dwLowDateTime;
 	ularge.HighPart = file_time.dwHighDateTime;
 	now = (ularge.QuadPart - IPOSIX_CLOCK_FACTOR);
-	sec[0] = (time_t)(now / 10000000);
+	sec[0] = (IINT64)(now / 10000000);
 	nsec[0] = (long)((now % 10000000) * 100);
 }
 
 /* convert LONGLONG to sec/nsec */
-void iposix_clock_conv(LONGLONG qpc, LONGLONG freq, time_t *sec, long *nsec)
+void iposix_clock_conv(LONGLONG qpc, LONGLONG freq, IINT64 *sec, long *nsec)
 {
-	time_t tv_sec;
+	IINT64 tv_sec;
 	long tv_nsec;
 	if (freq < 1) freq = 1;
-	tv_sec = (time_t)(qpc / freq);
+	tv_sec = (IINT64)(qpc / freq);
 	qpc %= freq;
 	tv_nsec = (long)((qpc * 1000000000) / freq);
 	if (sec) sec[0] = tv_sec;
@@ -6563,11 +6564,12 @@ static LONGLONG iposix_clock_interrupt(void)
 {
 	LONG timeHigh;
 	ULONG timeLow;
+	LONGLONG now;
 	do {
 		timeHigh = iPosixInterruptTime->High1Time;
 		timeLow = iPosixInterruptTime->LowPart;
 	}	while (timeHigh != iPosixInterruptTime->High2Time);
-	LONGLONG now = ((LONGLONG)timeHigh << 32) | timeLow;
+	now = ((LONGLONG)timeHigh << 32) | timeLow;
 	return now - iposix_clock_interrupt_start;
 }
 
@@ -6576,7 +6578,7 @@ static LONGLONG iposix_clock_qpc_direct(void)
 {
 	LARGE_INTEGER qpc;
 	LONGLONG freq = IPOSIX_CLOCK_FREQUENCY.QuadPart;
-	time_t ts_sec;
+	IINT64 ts_sec;
 	long ts_nsec;
 	LONGLONG now;
 	QueryPerformanceCounter(&qpc);
@@ -6592,7 +6594,7 @@ static LONGLONG iposix_clock_qpc_unbiased(void)
 	ULONGLONG bias;
 	LARGE_INTEGER now;
 	LONGLONG freq, qpc;
-	time_t ts_sec, bts_sec;
+	IINT64 ts_sec, bts_sec;
 	long ts_nsec, bts_nsec;
 	do {
 		bias = *iPosixInterruptTimeBias;
@@ -6600,10 +6602,10 @@ static LONGLONG iposix_clock_qpc_unbiased(void)
 	}	while (bias != *iPosixInterruptTimeBias);
 	freq = IPOSIX_CLOCK_FREQUENCY.QuadPart;
 	if (freq == 0) freq = 1;
-	ts_sec = (time_t)(now.QuadPart / freq);
+	ts_sec = (IINT64)(now.QuadPart / freq);
 	now.QuadPart = now.QuadPart % freq;
 	ts_nsec = (long)((now.QuadPart * 1000000000) / freq);
-	bts_sec = (time_t)(bias / 10000000);
+	bts_sec = (IINT64)(bias / 10000000);
 	bts_nsec = (long)((bias % 10000000) * 100);
 	ts_nsec -= bts_nsec;
 	if (ts_nsec < 0) {
@@ -6651,11 +6653,11 @@ static ULONGLONG iposix_clock_monotonic_win7(void)
 }
 
 /* final monotonic clock for Windows */
-static void iposix_clock_win32_monotonic(time_t *sec, long *nsec)
+static void iposix_clock_win32_monotonic(IINT64 *sec, long *nsec)
 {
 	if (PQueryUnbiasedInterruptTimePrecise_o != NULL) {
 		ULONGLONG now = iposix_clock_monotonic_win10();
-		if (sec) sec[0] = (time_t)(now / 10000000);
+		if (sec) sec[0] = (IINT64)(now / 10000000);
 		if (nsec) nsec[0] = (long)((now % 10000000) * 100);
 	}
 	else {
@@ -6675,11 +6677,11 @@ static void iposix_clock_win32_monotonic(time_t *sec, long *nsec)
 }
 
 /* final coarse monotonic clock for Windows */
-static void iposix_clock_win32_monotonic_coarse(time_t *sec, long *nsec)
+static void iposix_clock_win32_monotonic_coarse(IINT64 *sec, long *nsec)
 {
 	if (PQueryUnbiasedInterruptTime_o != NULL) {
 		ULONGLONG now = iposix_clock_monotonic_win7();
-		if (sec) sec[0] = (time_t)(now / 10000000);
+		if (sec) sec[0] = (IINT64)(now / 10000000);
 		if (nsec) nsec[0] = (long)((now % 10000000) * 100);
 	}
 	else {
@@ -6691,9 +6693,9 @@ static void iposix_clock_win32_monotonic_coarse(time_t *sec, long *nsec)
 
 
 /* high resolution clock, returns nanosecond */
-void iposix_clock_gettime(int source, time_t *sec, long *nsec)
+void iposix_clock_gettime(int source, IINT64 *sec, long *nsec)
 {
-	time_t tv_sec = 0;
+	IINT64 tv_sec = 0;
 	long tv_nsec = 0;
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 	static int inited = 0, once = 0;
@@ -6754,17 +6756,17 @@ void iposix_clock_gettime(int source, time_t *sec, long *nsec)
 		tv.tv_nsec = 0;
 		break;
 	}
-	tv_sec = (time_t)(tv.tv_sec);
+	tv_sec = (IINT64)(tv.tv_sec);
 	tv_nsec = (long)(tv.tv_nsec);
 #elif defined(__unix)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	tv_sec = (time_t)(tv.tv_sec);
+	tv_sec = (IINT64)(tv.tv_sec);
 	tv_nsec = (long)(tv.tv_usec * 1000);
 #else
 	long sec, usec;
 	itimeofday(&sec, &usec);
-	tv_sec = (time_t)sec;
+	tv_sec = (IINT64)sec;
 	tv_nsec = (long)(usec * 1000);
 #endif
 	if (sec) sec[0] = tv_sec;
@@ -6775,7 +6777,7 @@ void iposix_clock_gettime(int source, time_t *sec, long *nsec)
 /* returns 64bit nanosecond */
 IINT64 iposix_clock_nanosec(int source)
 {
-	time_t sec = 0;
+	IINT64 sec = 0;
 	long nsec = 0;
 	IINT64 now;
 	iposix_clock_gettime(source, &sec, &nsec);
